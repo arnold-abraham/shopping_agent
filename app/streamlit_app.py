@@ -62,9 +62,7 @@ with st.sidebar:
     st.header("Shop by Image")
     st.caption("Upload a photo of a product and I'll find similar items in our store.")
 
-    uploaded_file = st.file_uploader(
-        "Upload product image", type=["jpg", "jpeg", "png", "webp"]
-    )
+    uploaded_file = st.file_uploader("Upload product image", type=["jpg", "jpeg", "png", "webp"])
 
     if uploaded_file:
         st.image(uploaded_file, use_container_width=True)
@@ -75,7 +73,10 @@ with st.sidebar:
             tmp.write(uploaded_file.getvalue())
             image_path = tmp.name
 
-        prompt = f"{IMAGE_PROMPT_PREFIX}. Please analyze it and find similar products in the store. Image path: {image_path}"
+        prompt = (
+            f"{IMAGE_PROMPT_PREFIX}. Please analyze it and find similar products in the store. "
+            f"Image path: {image_path}"
+        )
         st.session_state.messages.append({"role": "user", "content": prompt})
         st.session_state.pending_image = image_path
         st.rerun()

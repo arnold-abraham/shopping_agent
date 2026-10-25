@@ -14,10 +14,11 @@ def search(**kwargs):
 # search_products
 # ---------------------------------------------------------------------------
 
+
 def test_search_matches_name_description_and_category():
     names = {p["name"] for p in search(query="honey")}
-    assert "Clover Honey" in names        # name and category
-    assert "Organic Granola" in names     # description only
+    assert "Clover Honey" in names  # name and category
+    assert "Organic Granola" in names  # description only
 
 
 def test_search_returns_expected_fields():
@@ -69,6 +70,7 @@ def test_search_reports_database_errors(monkeypatch, tmp_path):
 # get_ratings
 # ---------------------------------------------------------------------------
 
+
 def test_get_ratings_returns_one_entry_per_id():
     ratings = json.loads(get_ratings.invoke({"product_ids": [1, 7]}))
     assert [(r["product_id"], r["average_rating"]) for r in ratings] == [(1, 4.62), (7, 4.75)]
@@ -78,12 +80,15 @@ def test_get_ratings_returns_one_entry_per_id():
 # checkout
 # ---------------------------------------------------------------------------
 
+
 def test_checkout_records_order(query):
     message = checkout.invoke({"product_id": 4})
 
     assert message.startswith("Order #1 confirmed!")
     assert "'Clover Honey'" in message and "$8.99" in message
-    assert query("SELECT product_id, product_name, price FROM orders") == [(4, "Clover Honey", 8.99)]
+    assert query("SELECT product_id, product_name, price FROM orders") == [
+        (4, "Clover Honey", 8.99)
+    ]
 
 
 def test_checkout_unknown_product(query):
@@ -94,6 +99,7 @@ def test_checkout_unknown_product(query):
 # ---------------------------------------------------------------------------
 # describe_product_image
 # ---------------------------------------------------------------------------
+
 
 class FakeVisionLLM:
     def __init__(self, reply=None, error=None):

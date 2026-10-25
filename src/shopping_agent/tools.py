@@ -9,7 +9,7 @@ import json
 import logging
 import sqlite3
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
 
 from langchain.tools import tool
 from langchain_core.messages import HumanMessage
@@ -22,30 +22,29 @@ from shopping_agent.reviews import get_ratings_for_products
 logger = logging.getLogger(__name__)
 
 IMAGE_MIME_TYPES = {
-    ".jpg":  "image/jpeg",
+    ".jpg": "image/jpeg",
     ".jpeg": "image/jpeg",
-    ".png":  "image/png",
+    ".png": "image/png",
     ".webp": "image/webp",
 }
 
 
 def _vision_llm() -> ChatOpenAI:
     settings = get_settings()
-    return ChatOpenAI(
-        model=settings.openai_model, temperature=0, api_key=require_api_key(settings)
-    )
+    return ChatOpenAI(model=settings.openai_model, temperature=0, api_key=require_api_key(settings))
 
 
 # ---------------------------------------------------------------------------
 # Tools
 # ---------------------------------------------------------------------------
 
+
 @tool
 def search_products(
     query: str,
-    max_price: Optional[float] = None,
-    is_organic: Optional[bool] = None,
-    sort_by: Optional[Literal["price_asc", "price_desc"]] = None,
+    max_price: float | None = None,
+    is_organic: bool | None = None,
+    sort_by: Literal["price_asc", "price_desc"] | None = None,
 ) -> str:
     """
     Search the product database by keyword (matched against name, description, and category).
@@ -71,7 +70,7 @@ def search_products(
         params.append(1 if is_organic else 0)
 
     sql += {
-        "price_asc":  " ORDER BY price ASC, id",
+        "price_asc": " ORDER BY price ASC, id",
         "price_desc": " ORDER BY price DESC, id",
     }.get(sort_by, " ORDER BY id")
 
@@ -84,12 +83,12 @@ def search_products(
 
     products = [
         {
-            "id":          row["id"],
-            "name":        row["name"],
-            "category":    row["category"],
-            "price":       row["price"],
+            "id": row["id"],
+            "name": row["name"],
+            "category": row["category"],
+            "price": row["price"],
             "description": row["description"],
-            "is_organic":  bool(row["is_organic"]),
+            "is_organic": bool(row["is_organic"]),
         }
         for row in rows
     ]
@@ -158,23 +157,25 @@ def describe_product_image(image_path: str) -> str:
 
     image_data = base64.b64encode(path.read_bytes()).decode()
 
-    message = HumanMessage(content=[
-        {
-            "type": "image_url",
-            "image_url": {"url": f"data:{mime};base64,{image_data}"},
-        },
-        {
-            "type": "text",
-            "text": (
-                "Look at this product image and extract its key attributes. "
-                "Return ONLY a JSON object with these fields:\n"
-                "- product_type: what kind of product it is (e.g. honey, olive oil, almonds)\n"
-                "- search_query: a short keyword to search for it (e.g. 'honey', 'olive oil')\n"
-                "- is_organic: true if the label says organic, false if not, null if unclear\n"
-                "- description: one sentence describing the product"
-            ),
-        },
-    ])
+    message = HumanMessage(
+        content=[
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:{mime};base64,{image_data}"},
+            },
+            {
+                "type": "text",
+                "text": (
+                    "Look at this product image and extract its key attributes. "
+                    "Return ONLY a JSON object with these fields:\n"
+                    "- product_type: what kind of product it is (e.g. honey, olive oil, almonds)\n"
+                    "- search_query: a short keyword to search for it (e.g. 'honey', 'olive oil')\n"
+                    "- is_organic: true if the label says organic, false if not, null if unclear\n"
+                    "- description: one sentence describing the product"
+                ),
+            },
+        ]
+    )
 
     try:
         response = _vision_llm().invoke([message])

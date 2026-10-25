@@ -1,9 +1,15 @@
+# Secrets and local data
 .env
-store.db
-.idea/
-.claude/
+*.db
+
+# Python
 __pycache__/
 *.pyc
-
-.venv/
 *.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Editors and tools
+.idea/
+.claude/

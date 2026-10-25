@@ -1,12 +1,15 @@
 [build-system]
-requires = ["setuptools>=69"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "shopping-agent"
 version = "0.1.0"
-description = "AI shopping assistant built with LangGraph, GPT-4o, and Streamlit."
+description = "AI shopping assistant built with LangChain, GPT-4o, and Streamlit."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Arnold Abraham" }]
 requires-python = ">=3.11"
 dependencies = [
     "langchain>=1.4,<2",
@@ -19,6 +22,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8",
+    "ruff>=0.17",
+    "pre-commit>=4",
 ]
 
 [tool.setuptools.packages.find]
@@ -27,3 +32,15 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+# Seed data tables are kept column-aligned for readability.
+"src/shopping_agent/db.py" = ["E501"]

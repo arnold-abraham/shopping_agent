@@ -24,7 +24,7 @@ def get_ratings_for_products(product_ids: list[int]) -> list[dict]:
         {
             "product_id": pid,
             "average_rating": ratings_map.get(pid, {}).get("average_rating", 0.0),
-            "review_count":   ratings_map.get(pid, {}).get("review_count", 0),
+            "review_count": ratings_map.get(pid, {}).get("review_count", 0),
         }
         for pid in product_ids
     ]

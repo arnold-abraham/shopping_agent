@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 """
 
+# fmt: off
 PRODUCTS = [
     # --- Honey (8) ---
     (1,  "Organic Raw Honey",            "honey",        14.99, "Pure organic raw honey, unfiltered and cold-pressed",                1),
@@ -200,6 +201,7 @@ REVIEWS = [
     (32, 3.5, "Yosef",  "Slightly thin but good for cereal."),
     (32, 3.5, "Zola",   "Decent soy milk, nothing special."),
 ]
+# fmt: on
 
 
 @contextmanager

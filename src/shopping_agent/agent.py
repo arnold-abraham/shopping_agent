@@ -40,7 +40,10 @@ SYSTEM_PROMPT = (
 
 
 def build_agent(model: BaseChatModel | None = None):
-    """Build the agent graph. Pass `model` to override the default OpenAI chat model (e.g. in tests)."""
+    """Build the agent graph.
+
+    Pass `model` to override the default OpenAI chat model (e.g. a fake model in tests).
+    """
     if model is None:
         settings = get_settings()
         model = ChatOpenAI(

@@ -45,15 +45,13 @@ def test_ensure_db_leaves_existing_database_alone(db_path, query):
 
 
 def test_get_connection_rolls_back_on_error(query):
-    with pytest.raises(RuntimeError):
-        with get_connection() as conn:
-            conn.execute("DELETE FROM reviews")
-            raise RuntimeError("boom")
+    with pytest.raises(RuntimeError), get_connection() as conn:
+        conn.execute("DELETE FROM reviews")
+        raise RuntimeError("boom")
 
     assert query("SELECT COUNT(*) FROM reviews")[0][0] == len(REVIEWS)
 
 
 def test_foreign_keys_are_enforced():
-    with pytest.raises(sqlite3.IntegrityError):
-        with get_connection() as conn:
-            conn.execute("INSERT INTO orders (product_id, product_name, price) VALUES (999, 'x', 1.0)")
+    with pytest.raises(sqlite3.IntegrityError), get_connection() as conn:
+        conn.execute("INSERT INTO orders (product_id, product_name, price) VALUES (999, 'x', 1.0)")

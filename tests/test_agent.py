@@ -28,14 +28,19 @@ def tool_results(messages):
 
 def test_agent_registers_all_tools():
     assert {t.name for t in TOOLS} == {
-        "search_products", "get_ratings", "checkout", "describe_product_image"
+        "search_products",
+        "get_ratings",
+        "checkout",
+        "describe_product_image",
     }
 
 
 def test_browsing_flow_searches_then_rates():
     messages = run(
         [
-            tool_call("search_products", {"query": "honey", "is_organic": True, "max_price": 15}, "1"),
+            tool_call(
+                "search_products", {"query": "honey", "is_organic": True, "max_price": 15}, "1"
+            ),
             tool_call("get_ratings", {"product_ids": [1]}, "2"),
             AIMessage(content="#1. Organic Raw Honey (ID:1) — $14.99 ★4.62 — organic"),
         ],

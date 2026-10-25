@@ -37,9 +37,7 @@ def get_settings() -> Settings:
 
 def require_api_key(settings: Settings) -> str:
     if not settings.openai_api_key:
-        raise ConfigError(
-            "OPENAI_API_KEY is not set. Copy .env.example to .env and add your key."
-        )
+        raise ConfigError("OPENAI_API_KEY is not set. Copy .env.example to .env and add your key.")
     return settings.openai_api_key
 
 
