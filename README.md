@@ -12,15 +12,16 @@ An AI-powered shopping assistant built with LangGraph and GPT-4o. Search product
 ## Setup
 
 ```bash
-pip install -r requirements.txt
-cp .env.example .env   # then add your OpenAI API key
-python setup_db.py     # seed the SQLite database
+python -m venv .venv && source .venv/bin/activate
+pip install -e .
+cp .env.example .env        # then add your OpenAI API key
+python scripts/seed_db.py   # seed the SQLite database
 ```
 
 ## Run
 
 ```bash
-streamlit run app.py
+streamlit run app/streamlit_app.py
 ```
 
 Open http://localhost:8501 in your browser.
@@ -29,4 +30,4 @@ Open http://localhost:8501 in your browser.
 
 - `"I want organic honey under $20 with 4+ rating"`
 - `"Show me oats, cheapest first"`
-- Upload an image from `resources/` and click **Find similar products**
+- Upload an image from `assets/sample_images/` and click **Find similar products**

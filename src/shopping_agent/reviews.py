@@ -1,12 +1,8 @@
-"""
-Reviews API — reads from the `reviews` table in store.db and returns
-aggregated rating information for products.
-"""
+"""Rating queries over the `reviews` table."""
 
 import sqlite3
-import os
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "store.db")
+from shopping_agent.db import DB_PATH
 
 
 def get_product_rating(product_id: int) -> dict:
@@ -54,15 +50,3 @@ def get_ratings_for_products(product_ids: list[int]) -> list[dict]:
         for pid in product_ids
     ]
 
-
-if __name__ == "__main__":
-    # Single product
-    result = get_product_rating(1)
-    print("Single product rating:")
-    print(f"  Product {result['product_id']}: {result['average_rating']} stars ({result['review_count']} reviews)")
-
-    # Multiple products
-    print("\nBatch ratings:")
-    results = get_ratings_for_products([1, 3, 5, 7])
-    for r in results:
-        print(f"  Product {r['product_id']}: {r['average_rating']} stars ({r['review_count']} reviews)")

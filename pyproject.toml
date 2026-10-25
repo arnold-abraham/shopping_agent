@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shopping-agent"
+version = "0.1.0"
+description = "AI shopping assistant built with LangGraph, GPT-4o, and Streamlit."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "langchain>=1.4,<2",
+    "langchain-openai>=1.7,<2",
+    "langgraph>=1.2,<2",
+    "streamlit>=1.66,<2",
+    "python-dotenv>=1.2,<2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

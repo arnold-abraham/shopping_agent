@@ -3,7 +3,7 @@ import tempfile
 
 import streamlit as st
 
-from shopping_agent import agent
+from shopping_agent.agent import agent
 
 # ---------------------------------------------------------------------------
 # Page config

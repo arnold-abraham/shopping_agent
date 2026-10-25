@@ -4,3 +4,6 @@ store.db
 .claude/
 __pycache__/
 *.pyc
+
+.venv/
+*.egg-info/

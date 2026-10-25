@@ -1,7 +1,10 @@
-import sqlite3
-import os
+"""SQLite schema and seed data for the store."""
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "store.db")
+import sqlite3
+from pathlib import Path
+
+# Project root (two levels above src/shopping_agent/).
+DB_PATH = Path(__file__).resolve().parents[2] / "store.db"
 
 
 def create_database():
@@ -213,6 +216,3 @@ def create_database():
     conn.close()
     print(f"Database created at: {DB_PATH}")
 
-
-if __name__ == "__main__":
-    create_database()
