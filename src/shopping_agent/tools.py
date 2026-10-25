@@ -9,7 +9,7 @@ import json
 import logging
 import sqlite3
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 from langchain.tools import tool
 from langchain_core.messages import HumanMessage
@@ -17,7 +17,7 @@ from langchain_openai import ChatOpenAI
 
 from shopping_agent.config import get_settings, require_api_key
 from shopping_agent.db import get_connection
-from shopping_agent.reviews import get_product_rating
+from shopping_agent.reviews import get_ratings_for_products
 
 logger = logging.getLogger(__name__)
 
@@ -41,10 +41,16 @@ def _vision_llm() -> ChatOpenAI:
 # ---------------------------------------------------------------------------
 
 @tool
-def search_products(query: str, max_price: Optional[float] = None, is_organic: Optional[bool] = None) -> str:
+def search_products(
+    query: str,
+    max_price: Optional[float] = None,
+    is_organic: Optional[bool] = None,
+    sort_by: Optional[Literal["price_asc", "price_desc"]] = None,
+) -> str:
     """
     Search the product database by keyword (matched against name, description, and category).
-    Optionally filter by maximum price and/or organic status.
+    Optionally filter by maximum price and/or organic status, and sort by price
+    ("price_asc" for cheapest first, "price_desc" for most expensive first).
     Returns a JSON array of matching products, each with: id, name, category, price,
     description, is_organic.
     """
@@ -63,6 +69,11 @@ def search_products(query: str, max_price: Optional[float] = None, is_organic: O
     if is_organic is not None:
         sql += " AND is_organic = ?"
         params.append(1 if is_organic else 0)
+
+    sql += {
+        "price_asc":  " ORDER BY price ASC, id",
+        "price_desc": " ORDER BY price DESC, id",
+    }.get(sort_by, " ORDER BY id")
 
     try:
         with get_connection() as conn:
@@ -86,15 +97,16 @@ def search_products(query: str, max_price: Optional[float] = None, is_organic: O
 
 
 @tool
-def get_rating(product_id: int) -> str:
+def get_ratings(product_ids: list[int]) -> str:
     """
-    Get the average customer rating and total review count for a product by its ID.
-    Returns a JSON object with: product_id, average_rating, review_count.
+    Get the average customer rating and total review count for several products at once.
+    Pass the IDs of all candidate products in a single call.
+    Returns a JSON array of objects with: product_id, average_rating, review_count.
     """
     try:
-        result = get_product_rating(product_id)
+        result = get_ratings_for_products(product_ids)
     except sqlite3.Error:
-        logger.exception("get_rating failed")
+        logger.exception("get_ratings failed")
         return "Error: ratings are unavailable right now."
     return json.dumps(result)
 

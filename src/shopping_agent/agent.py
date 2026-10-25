@@ -5,9 +5,9 @@ from langchain_core.language_models import BaseChatModel
 from langchain_openai import ChatOpenAI
 
 from shopping_agent.config import get_settings, require_api_key
-from shopping_agent.tools import checkout, describe_product_image, get_rating, search_products
+from shopping_agent.tools import checkout, describe_product_image, get_ratings, search_products
 
-TOOLS = [search_products, get_rating, checkout, describe_product_image]
+TOOLS = [search_products, get_ratings, checkout, describe_product_image]
 
 SYSTEM_PROMPT = (
     "You are a helpful shopping assistant. Follow these rules strictly.\n\n"
@@ -16,8 +16,9 @@ SYSTEM_PROMPT = (
     "2. Use the returned search_query and is_organic to call search_products.\n"
     "3. Continue with the BROWSING flow from step 2 onwards.\n\n"
     "BROWSING — when the user describes what they want to buy:\n"
-    "1. Call search_products to find matching items (apply any price/organic filters given).\n"
-    "2. For each candidate, call get_rating to retrieve its average rating.\n"
+    "1. Call search_products to find matching items (apply any price/organic filters given; "
+    "   use sort_by='price_asc' for 'cheapest first' or 'price_desc' for 'most expensive first').\n"
+    "2. Call get_ratings ONCE with the IDs of all candidates to retrieve their average ratings.\n"
     "3. Filter by the user's minimum rating if specified.\n"
     "4. Present qualifying products as a numbered list. For each item use this exact format "
     "   (plain text, no backticks, no code blocks, no bold, no italic):\n\n"

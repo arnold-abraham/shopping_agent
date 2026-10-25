@@ -46,9 +46,19 @@ def run_agent(messages: list[dict]) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Sidebar — shop by image
+# Chat state
+# ---------------------------------------------------------------------------
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# ---------------------------------------------------------------------------
+# Sidebar — new chat and shop by image
 # ---------------------------------------------------------------------------
 with st.sidebar:
+    if st.button("🗑️ New chat", use_container_width=True, disabled=not st.session_state.messages):
+        st.session_state.messages = []
+        st.rerun()
+
     st.header("Shop by Image")
     st.caption("Upload a photo of a product and I'll find similar items in our store.")
 
@@ -71,11 +81,8 @@ with st.sidebar:
         st.rerun()
 
 # ---------------------------------------------------------------------------
-# Chat state
+# Chat history
 # ---------------------------------------------------------------------------
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
 # Render history — show a friendlier label for image-search messages
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
