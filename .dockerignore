@@ -1,0 +1,14 @@
+.git
+.github
+.venv
+.idea
+.claude
+.env
+*.db
+*.pdf
+generate_guide.py
+tests
+__pycache__
+*.egg-info
+.pytest_cache
+.ruff_cache
