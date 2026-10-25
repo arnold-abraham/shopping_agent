@@ -15,7 +15,7 @@ An AI-powered shopping assistant built with LangGraph and GPT-4o. Search product
 python -m venv .venv && source .venv/bin/activate
 pip install -e .
 cp .env.example .env        # then add your OpenAI API key
-python scripts/seed_db.py   # seed the SQLite database
+python scripts/seed_db.py   # optional: the app creates the DB on first run
 ```
 
 ## Run

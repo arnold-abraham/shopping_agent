@@ -1,19 +1,39 @@
-"""LangChain tools the shopping agent can call."""
+"""LangChain tools the shopping agent can call.
+
+Tools never raise: failures are returned as "Error: ..." strings so the agent can
+explain the problem to the user instead of crashing the conversation.
+"""
 
 import base64
 import json
-import os
+import logging
 import sqlite3
+from pathlib import Path
 from typing import Optional
 
 from langchain.tools import tool
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 
-from shopping_agent.db import DB_PATH
+from shopping_agent.config import get_settings, require_api_key
+from shopping_agent.db import get_connection
 from shopping_agent.reviews import get_product_rating
 
-vision_llm = ChatOpenAI(model="gpt-4o", temperature=0)
+logger = logging.getLogger(__name__)
+
+IMAGE_MIME_TYPES = {
+    ".jpg":  "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png":  "image/png",
+    ".webp": "image/webp",
+}
+
+
+def _vision_llm() -> ChatOpenAI:
+    settings = get_settings()
+    return ChatOpenAI(
+        model=settings.openai_model, temperature=0, api_key=require_api_key(settings)
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -28,9 +48,6 @@ def search_products(query: str, max_price: Optional[float] = None, is_organic: O
     Returns a JSON array of matching products, each with: id, name, category, price,
     description, is_organic.
     """
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
     sql = "SELECT id, name, category, price, description, is_organic FROM products WHERE 1=1"
     params: list = []
 
@@ -47,18 +64,21 @@ def search_products(query: str, max_price: Optional[float] = None, is_organic: O
         sql += " AND is_organic = ?"
         params.append(1 if is_organic else 0)
 
-    cursor.execute(sql, params)
-    rows = cursor.fetchall()
-    conn.close()
+    try:
+        with get_connection() as conn:
+            rows = conn.execute(sql, params).fetchall()
+    except sqlite3.Error:
+        logger.exception("search_products failed")
+        return "Error: the product catalogue is unavailable right now."
 
     products = [
         {
-            "id":          row[0],
-            "name":        row[1],
-            "category":    row[2],
-            "price":       row[3],
-            "description": row[4],
-            "is_organic":  bool(row[5]),
+            "id":          row["id"],
+            "name":        row["name"],
+            "category":    row["category"],
+            "price":       row["price"],
+            "description": row["description"],
+            "is_organic":  bool(row["is_organic"]),
         }
         for row in rows
     ]
@@ -71,7 +91,11 @@ def get_rating(product_id: int) -> str:
     Get the average customer rating and total review count for a product by its ID.
     Returns a JSON object with: product_id, average_rating, review_count.
     """
-    result = get_product_rating(product_id)
+    try:
+        result = get_product_rating(product_id)
+    except sqlite3.Error:
+        logger.exception("get_rating failed")
+        return "Error: ratings are unavailable right now."
     return json.dumps(result)
 
 
@@ -81,24 +105,25 @@ def checkout(product_id: int) -> str:
     Place an order for the given product ID. Saves the order to the database and returns
     a confirmation message with the order ID, product name, and price.
     """
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT name, price FROM products WHERE id = ?", (product_id,))
-    row = cursor.fetchone()
+    try:
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT name, price FROM products WHERE id = ?", (product_id,)
+            ).fetchone()
+            if not row:
+                return f"Error: product with ID {product_id} not found."
 
-    if not row:
-        conn.close()
-        return f"Error: product with ID {product_id} not found."
+            name, price = row["name"], row["price"]
+            cursor = conn.execute(
+                "INSERT INTO orders (product_id, product_name, price) VALUES (?, ?, ?)",
+                (product_id, name, price),
+            )
+            order_id = cursor.lastrowid
+    except sqlite3.Error:
+        logger.exception("checkout failed for product %s", product_id)
+        return "Error: the order could not be placed. Please try again."
 
-    name, price = row
-    cursor.execute(
-        "INSERT INTO orders (product_id, product_name, price) VALUES (?, ?, ?)",
-        (product_id, name, price),
-    )
-    order_id = cursor.lastrowid
-    conn.commit()
-    conn.close()
-
+    logger.info("Order #%s placed for product %s", order_id, product_id)
     return (
         f"Order #{order_id} confirmed! '{name}' has been successfully ordered for ${price:.2f}. "
         f"Your order will arrive in 3-5 business days. Thank you for shopping with us!"
@@ -112,11 +137,14 @@ def describe_product_image(image_path: str) -> str:
     Use this when the user uploads a photo of a product they are interested in.
     The returned attributes can be used directly with search_products.
     """
-    with open(image_path, "rb") as f:
-        image_data = base64.b64encode(f.read()).decode()
+    path = Path(image_path)
+    mime = IMAGE_MIME_TYPES.get(path.suffix.lower())
+    if mime is None:
+        return f"Error: unsupported image type '{path.suffix}'. Use JPG, PNG, or WEBP."
+    if not path.is_file():
+        return f"Error: image not found at {image_path}."
 
-    ext = os.path.splitext(image_path)[1].lower().lstrip(".")
-    mime = "image/jpeg" if ext in ("jpg", "jpeg") else f"image/{ext}"
+    image_data = base64.b64encode(path.read_bytes()).decode()
 
     message = HumanMessage(content=[
         {
@@ -136,5 +164,9 @@ def describe_product_image(image_path: str) -> str:
         },
     ])
 
-    response = vision_llm.invoke([message])
+    try:
+        response = _vision_llm().invoke([message])
+    except Exception:
+        logger.exception("Image analysis failed for %s", image_path)
+        return "Error: the image could not be analysed right now."
     return response.content

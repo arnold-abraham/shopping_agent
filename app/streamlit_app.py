@@ -1,9 +1,17 @@
+import logging
 import os
 import tempfile
 
 import streamlit as st
 
-from shopping_agent.agent import agent
+from shopping_agent.agent import build_agent
+from shopping_agent.config import ConfigError, configure_logging
+from shopping_agent.db import ensure_db
+
+configure_logging()
+logger = logging.getLogger(__name__)
+
+IMAGE_PROMPT_PREFIX = "I uploaded a product image"
 
 # ---------------------------------------------------------------------------
 # Page config
@@ -12,6 +20,30 @@ st.set_page_config(page_title="AI Shopping Assistant", page_icon="🛒", layout=
 
 st.title("🛒 AI Shopping Assistant")
 st.caption("Tell me what you want — I'll search, rate, and order the best match for you.")
+
+
+@st.cache_resource
+def get_agent():
+    ensure_db()
+    return build_agent()
+
+
+try:
+    agent = get_agent()
+except ConfigError as exc:
+    st.error(str(exc))
+    st.stop()
+
+
+def run_agent(messages: list[dict]) -> str:
+    """Invoke the agent and return its reply, or a user-facing error message."""
+    try:
+        result = agent.invoke({"messages": messages})
+    except Exception:
+        logger.exception("Agent invocation failed")
+        return "Sorry, something went wrong while contacting the assistant. Please try again."
+    return result["messages"][-1].content.replace("`", "")
+
 
 # ---------------------------------------------------------------------------
 # Sidebar — shop by image
@@ -33,9 +65,9 @@ with st.sidebar:
             tmp.write(uploaded_file.getvalue())
             image_path = tmp.name
 
-        prompt = f"I uploaded a product image. Please analyze it and find similar products in the store. Image path: {image_path}"
+        prompt = f"{IMAGE_PROMPT_PREFIX}. Please analyze it and find similar products in the store. Image path: {image_path}"
         st.session_state.messages.append({"role": "user", "content": prompt})
-        st.session_state.pending_image = uploaded_file.name
+        st.session_state.pending_image = image_path
         st.rerun()
 
 # ---------------------------------------------------------------------------
@@ -47,7 +79,7 @@ if "messages" not in st.session_state:
 # Render history — show a friendlier label for image-search messages
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
-        if msg["role"] == "user" and msg["content"].startswith("I uploaded a product image"):
+        if msg["role"] == "user" and msg["content"].startswith(IMAGE_PROMPT_PREFIX):
             filename = msg["content"].split("Image path:")[-1].strip()
             st.markdown(f"Searching by image: **{os.path.basename(filename)}**")
         else:
@@ -61,14 +93,18 @@ if (
     and st.session_state.messages[-1]["role"] == "user"
     and "pending_image" in st.session_state
 ):
-    with st.chat_message("assistant"):
-        with st.spinner("Analyzing image and searching…"):
-            result = agent.invoke({"messages": st.session_state.messages})
-            response = result["messages"][-1].content.replace("`", "")
-        st.markdown(response.replace("$", r"\$"))
+    image_path = st.session_state.pop("pending_image")
+    try:
+        with st.chat_message("assistant"):
+            with st.spinner("Analyzing image and searching…"):
+                response = run_agent(st.session_state.messages)
+            st.markdown(response.replace("$", r"\$"))
+    finally:
+        # The uploaded image is only needed for this one agent run.
+        if os.path.exists(image_path):
+            os.remove(image_path)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
-    del st.session_state.pending_image
     st.rerun()
 
 # ---------------------------------------------------------------------------
@@ -81,8 +117,7 @@ if prompt := st.chat_input("e.g. I want organic honey under $15 with 4+ rating")
 
     with st.chat_message("assistant"):
         with st.spinner("Thinking…"):
-            result = agent.invoke({"messages": st.session_state.messages})
-            response = result["messages"][-1].content.replace("`", "")
+            response = run_agent(st.session_state.messages)
         st.markdown(response.replace("$", r"\$"))
 
     st.session_state.messages.append({"role": "assistant", "content": response})
